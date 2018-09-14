@@ -1,5 +1,4 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DoAndIfThenElse #-}
 
 {- |
    Module      : Data.FileStore.Git
@@ -19,34 +18,32 @@ module Data.FileStore.Git
   ( gitFileStore
   )
 where
-import           Data.FileStore.Types
-import           Data.Maybe                     ( fromMaybe
-                                                , mapMaybe
-                                                )
-import           Data.List.Split                ( endByOneOf )
-import           System.Exit
-import           Data.Time.Clock.POSIX          ( posixSecondsToUTCTime )
-import           Data.FileStore.Utils           ( withSanityCheck
-                                                , hashsMatch
-                                                , runShellCommand
-                                                , escapeRegexSpecialChars
-                                                , withVerifyDir
-                                                , encodeArg
-                                                )
-import qualified Data.ByteString.Lazy.Char8    as B
-import           Control.Monad                  ( when )
-import           System.FilePath                ( (</>)
-                                                , splitFileName
-                                                )
-import           System.Directory               ( createDirectoryIfMissing
-                                                , doesDirectoryExist
-                                                , executable
-                                                , getPermissions
-                                                , setPermissions
-                                                )
-import           Control.Exception              ( throwIO )
-import           Paths_filestore
-import qualified Control.Exception             as E
+import Data.FileStore.Types
+import Data.Maybe (fromMaybe, mapMaybe)
+import Data.List.Split (endByOneOf)
+import System.Exit
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Data.FileStore.Utils
+  ( withSanityCheck
+  , hashsMatch
+  , runShellCommand
+  , escapeRegexSpecialChars
+  , withVerifyDir
+  , encodeArg
+  )
+import qualified Data.ByteString.Lazy.Char8 as B
+import Control.Monad (when)
+import System.FilePath ((</>), splitFileName)
+import System.Directory
+  ( createDirectoryIfMissing
+  , doesDirectoryExist
+  , executable
+  , getPermissions
+  , setPermissions
+  )
+import Control.Exception (throwIO)
+import Paths_filestore
+import qualified Control.Exception as E
 
 -- | Return a filestore implemented using the git distributed revision control system
 -- (<http://git-scm.com/>).
@@ -63,7 +60,7 @@ gitFileStore repo = FileStore
   , index      = gitIndex repo
   , directory  = gitDirectory repo
   , search     = gitSearch repo
-  , idsMatch   = const hashsMatch repo
+  , idsMatch   = hashsMatch
   }
 
 -- | Run a git command and return error status, error output, standard output.  The repository
@@ -81,7 +78,7 @@ runGitCommandWithEnv
   -> [String]
   -> IO (ExitCode, String, B.ByteString)
 runGitCommandWithEnv givenEnv repo command args = do
-  let env = Just ([("GIT_DIFF_OPTS", "-u100000")] ++ givenEnv)
+  let env = Just (("GIT_DIFF_OPTS", "-u100000") : givenEnv)
   (status, err, out) <- runShellCommand repo env "git" (command : args)
   return (status, B.unpack err, out)
 
@@ -118,10 +115,11 @@ gitInit repo = do
 -- no changes.
 gitCommit :: FilePath -> [FilePath] -> Author -> String -> IO ()
 gitCommit repo names author logMsg = do
-  let env =
-        [ ("GIT_COMMITTER_NAME" , authorName author)
-        , ("GIT_COMMITTER_EMAIL", authorEmail author)
-        ]
+  let
+    env =
+      [ ("GIT_COMMITTER_NAME" , authorName author)
+      , ("GIT_COMMITTER_EMAIL", authorEmail author)
+      ]
   (statusCommit, errCommit, _) <-
     runGitCommandWithEnv env repo "commit"
     $  [ "--author"
@@ -158,12 +156,13 @@ isSymlink :: FilePath -> FilePath -> Maybe RevisionId -> IO Bool
 isSymlink repo name revid = do
   (_, _, out) <- runGitCommand repo "ls-tree" [fromMaybe "HEAD" revid, name]
   -- see http://stackoverflow.com/questions/737673
-  return $ (take 6 $ B.unpack out) == "120000"
+  return $ take 6 (B.unpack out) == "120000"
 
 targetContents :: Contents a => FilePath -> FilePath -> a -> IO (Maybe a)
 targetContents repo linkName linkContent = do
-  let (dirName, _) = splitFileName linkName
-      targetName   = repo </> dirName </> (B.unpack $ toByteString linkContent)
+  let
+    (dirName, _) = splitFileName linkName
+    targetName   = repo </> dirName </> (B.unpack $ toByteString linkContent)
   result <- E.try $ B.readFile targetName
   case result of
     Left  (_ :: E.SomeException) -> return Nothing
@@ -177,9 +176,10 @@ gitRetrieve
   -> Maybe RevisionId    -- ^ @Just@ revision ID, or @Nothing@ for latest
   -> IO a
 gitRetrieve repo name revid = do
-  let objectName = case revid of
-        Nothing  -> "HEAD:" ++ name
-        Just rev -> rev ++ ":" ++ name
+  let
+    objectName = case revid of
+      Nothing  -> "HEAD:" ++ name
+      Just rev -> rev ++ ":" ++ name
   -- Check that the object is a file (blob), not a directory (tree)
   (_, _, output) <- runGitCommand repo "cat-file" ["-t", objectName]
   when (take 4 (B.unpack output) /= "blob") $ throwIO NotFound
@@ -258,9 +258,10 @@ gitGetRevision repo revid = do
 -- | Get a list of all known files inside and managed by a repository.
 gitIndex :: FilePath -> IO [FilePath]
 gitIndex repo = withVerifyDir repo $ do
-  (status, _err, output) <- runGitCommand repo
-                                          "ls-tree"
-                                          ["-r", "-t", "-z", "HEAD"]
+  (status, _err, output) <- runGitCommand
+    repo
+    "ls-tree"
+    ["-r", "-t", "-z", "HEAD"]
   if status == ExitSuccess
     then
       return
@@ -293,16 +294,18 @@ gitDirectory repo dir = withVerifyDir (repo </> dir) $ do
 -- is interpreted as an ordinary string.
 gitSearch :: FilePath -> SearchQuery -> IO [SearchMatch]
 gitSearch repo query = do
-  let opts =
-        ["-I", "-n", "--null"]
-          ++ [ "--ignore-case" | queryIgnoreCase query ]
-          ++ [ "--all-match" | queryMatchAll query ]
-          ++ [ "--word-regexp" | queryWholeWords query ]
+  let
+    opts =
+      ["-I", "-n", "--null"]
+        ++ [ "--ignore-case" | queryIgnoreCase query ]
+        ++ [ "--all-match" | queryMatchAll query ]
+        ++ [ "--word-regexp" | queryWholeWords query ]
   (status, errOutput, output) <- runGitCommand
     repo
     "grep"
-    (opts ++ concatMap (\term -> ["-e", escapeRegexSpecialChars term])
-                       (queryPatterns query)
+    (opts ++ concatMap
+      (\term -> ["-e", escapeRegexSpecialChars term])
+      (queryPatterns query)
     )
   case status of
     ExitSuccess   -> return $ map parseMatchLine $ lines $ B.unpack output
@@ -438,11 +441,11 @@ parseChanges (x : y : zs) = do
         'D' -> return $ Deleted file'
         _   -> pcErr
           (  "found unknown changeType '"
-          ++ (show changeType)
+          ++ show changeType
           ++ "' in: "
-          ++ (show x)
+          ++ show x
           ++ " on "
-          ++ (show y)
+          ++ show y
           )
       rest <- parseChanges zs
       return (next : rest)

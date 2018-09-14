@@ -36,8 +36,8 @@ import qualified Data.ByteString.Lazy as B (ByteString, writeFile, null)
 -- | Return a filestore implemented using the Darcs distributed revision control system
 -- (<http://darcs.net/>).
 darcsFileStore :: FilePath -> FileStore
-darcsFileStore repo = FileStore {
-    initialize      = darcsInit repo
+darcsFileStore repo = FileStore  
+  { initialize      = darcsInit repo
   , save            = darcsSave repo
   , retrieve        = darcsRetrieve repo
   , delete          = darcsDelete repo
@@ -48,7 +48,8 @@ darcsFileStore repo = FileStore {
   , index           = darcsIndex repo
   , directory       = darcsDirectory repo
   , search          = darcsSearch repo
-  , idsMatch        = const hashsMatch repo }
+  , idsMatch        = hashsMatch 
+  }
 
 -- | Run a darcs command and return error status, error output, standard output.  The repository
 -- is used as working directory.
@@ -96,7 +97,7 @@ darcsCommit repo names author logMsg = do
 
 -- | Change the name of a resource.
 darcsMove :: FilePath -> FilePath -> FilePath -> Author -> Description -> IO ()
-darcsMove repo oldName newName author logMsg = do
+darcsMove repo oldName newName author logMsg =
   withSanityCheck repo ["_darcs"] newName $ do
     (statusAdd, _, _) <- runDarcsCommand repo "add" [dropFileName newName]
     (statusAdd', _,_) <- runDarcsCommand repo "mv" [oldName, newName]
@@ -188,13 +189,11 @@ darcsRetrieve repo name mbId = do
               Nothing    -> ["contents", name]
               Just revid -> ["contents", "--match=hash " ++ revid, name]
   (status, err, output) <- runDarcsCommand repo "show" opts
-  if B.null output
-     then do
+  when (B.null output) $ do 
        (_, _, out) <- runDarcsCommand repo "show" (["files", "--no-directories"] ++ opts)
-       if B.null out || null (filter (== name) . getNames $ output)
-          then throwIO NotFound
-          else return ()
-     else return ()
+       when 
+        (B.null out || null (filter (== name) . getNames $ output)) 
+        (throwIO NotFound)
   if status == ExitSuccess
      then return $ fromByteString output
      else throwIO $ UnknownError $ "Error in darcs query contents:\n" ++ err

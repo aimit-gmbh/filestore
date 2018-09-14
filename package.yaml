@@ -22,7 +22,7 @@ extra-source-files:
 - extra/post-update
 - TODO
 
-ghc-options: -Wall -fno-warn-unused-do-bind
+ghc-options: -Wall -Wcompat -Wincomplete-uni-patterns -Wincomplete-record-updates -fno-warn-unused-do-bind -Wredundant-constraints -Wpartial-fields
 
 library:
   dependencies:
@@ -46,7 +46,7 @@ library:
 tests:
   filestore-test-suite:
     source-dirs: tests
-    main: Main.hs
+    main: Tests.hs
     dependencies:
     - base
     - filestore
