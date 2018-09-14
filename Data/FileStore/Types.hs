@@ -12,28 +12,30 @@
 -}
 
 module Data.FileStore.Types
-           ( RevisionId
-           , Resource(..)
-           , Author(..)
-           , Change(..)
-           , Description
-           , Revision(..)
-           , Contents(..)
-           , TimeRange(..)
-           , MergeInfo(..)
-           , FileStoreError(..)
-           , SearchMatch(..)
-           , SearchQuery(..)
-           , defaultSearchQuery
-           , UTCTime
-           , FileStore (..) )
-
+  ( RevisionId
+  , Resource(..)
+  , Author(..)
+  , Change(..)
+  , Description
+  , Revision(..)
+  , Contents(..)
+  , TimeRange(..)
+  , MergeInfo(..)
+  , FileStoreError(..)
+  , SearchMatch(..)
+  , SearchQuery(..)
+  , defaultSearchQuery
+  , UTCTime
+  , FileStore(..)
+  )
 where
-import Data.ByteString.Lazy (ByteString)
-import Data.Typeable
-import Data.ByteString.Lazy.UTF8 (toString, fromString)
-import Data.Time (UTCTime)
-import Control.Exception (Exception)
+import           Data.ByteString.Lazy           ( ByteString )
+import           Data.Typeable
+import           Data.ByteString.Lazy.Char8     ( pack
+                                                , unpack
+                                                )
+import           Data.Time                      ( UTCTime )
+import           Control.Exception              ( Exception )
 
 type RevisionId   = String
 
@@ -73,8 +75,8 @@ instance Contents ByteString where
   fromByteString = id
 
 instance Contents String where
-  toByteString   = fromString
-  fromByteString = toString
+  toByteString   = pack
+  fromByteString = unpack
 
 data TimeRange =
   TimeRange {
@@ -128,12 +130,12 @@ data SearchQuery =
   } deriving (Show, Read, Eq, Typeable)
 
 defaultSearchQuery :: SearchQuery
-defaultSearchQuery = SearchQuery {
-     queryPatterns   = []
-   , queryWholeWords = True
-   , queryMatchAll   = True
-   , queryIgnoreCase = True
-   }
+defaultSearchQuery = SearchQuery
+  { queryPatterns   = []
+  , queryWholeWords = True
+  , queryMatchAll   = True
+  , queryIgnoreCase = True
+  }
 
 data SearchMatch =
   SearchMatch {

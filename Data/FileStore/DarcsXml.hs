@@ -36,7 +36,7 @@ authorXML = snd . splitEmailAuthor . fromMaybe "" . findAttr (QName "author" Not
 emailXML  = fromMaybe "" . fst . splitEmailAuthor . fromMaybe "" . findAttr (QName "author" Nothing Nothing)
 dateXML   = fromMaybe "" . findAttr (QName "local_date" Nothing Nothing)
 hashXML   = fromMaybe "" . findAttr (QName "hash" Nothing Nothing)
-descriptionXML = fromMaybe "" . fmap strContent . findChild (QName "name" Nothing Nothing)
+descriptionXML = maybe "" strContent . findChild (QName "name" Nothing Nothing)
 
 -- Perhaps there was no '--summary' option used, in which case there is no 'Change' information we
 -- can extract.

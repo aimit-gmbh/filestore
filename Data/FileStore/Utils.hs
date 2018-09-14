@@ -29,7 +29,7 @@ module Data.FileStore.Utils (
 import Control.Exception (throwIO)
 import Control.Applicative ((<$>))
 import Control.Monad (liftM, liftM2, when, unless)
-import Data.ByteString.Lazy.UTF8 (toString)
+import Data.ByteString.Lazy.Char8 (unpack)
 import Data.Char (isSpace)
 import Data.List (intersect, nub, isPrefixOf, isInfixOf)
 import Data.List.Split (splitWhen)
@@ -102,7 +102,7 @@ mergeContents (newLabel, newContents) (originalLabel, originalContents) (latestL
          case status of
               ExitSuccess             -> return (False, out)
               ExitFailure n | n >= 0  -> return (True, out)
-              _                       -> error $ "merge failed: " ++ toString err
+              _                       -> error $ "merge failed: " ++ unpack err
        else do
          mergeExists <- liftM isJust (findExecutable "merge")
          if mergeExists
@@ -112,12 +112,12 @@ mergeContents (newLabel, newContents) (originalLabel, originalContents) (latestL
                case status of
                     ExitSuccess             -> return (False, out)
                     ExitFailure 1           -> return (True, out)
-                    _                       -> error $ "merge failed: " ++ toString err
+                    _                       -> error $ "merge failed: " ++ unpack err
             else error "mergeContents requires 'git' or 'merge', and neither was found in the path."
   removeFile originalPath
   removeFile latestPath
   removeFile newPath
-  return (conflicts, toString mergedContents)
+  return (conflicts, unpack mergedContents)
 
 escapeRegexSpecialChars :: String -> String
 escapeRegexSpecialChars = backslashEscape "?*+{}[]\\^$.()"
@@ -179,7 +179,7 @@ trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace
 regSearchFiles :: FilePath -> [String] -> String -> IO [String]
 regSearchFiles repo filesToCheck pattern = do (_, _, result) <- runShellCommand repo
                                                              Nothing  "grep" $ ["--line-number", "-I", "-l", "-E", "-e", pattern] ++ filesToCheck
-                                              let results = intersect filesToCheck $ lines $ toString result
+                                              let results = intersect filesToCheck $ lines $ unpack result
                                               return results
 
 -- | Search a single file with multiple regexps.
@@ -187,7 +187,7 @@ regsSearchFile :: [String] -> FilePath -> [String] -> String -> IO [String]
 regsSearchFile os repo patterns file = do res <- mapM (run file) patterns
                                           return $ nub $ concat res
       where run f p = do (_,_,r) <- runShellCommand repo Nothing "grep" (os ++ [p, f])
-                         return $ lines $ toString r
+                         return $ lines $ unpack r
 
 -- | If name doesn't exist in repo or is not a file, throw 'NotFound' exception.
 ensureFileExists :: FilePath -> FilePath -> IO ()
@@ -234,7 +234,7 @@ grepSearchRepo indexer repo query = do
             runShellCommand repo Nothing "grep" $ opts ++
                                                   concatMap (\term -> ["-e", term]) regexps ++
                                                   files
-       let results = lines $ toString output
+       let results = lines $ unpack output
        return $ map parseMatchLine results
 
 -- | we don't actually need the contents, just want to check that the directory exists and we have enough permissions

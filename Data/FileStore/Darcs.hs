@@ -30,7 +30,7 @@ import Data.FileStore.DarcsXml (parseDarcsXML)
 import Data.FileStore.Types
 import Data.FileStore.Utils (withSanityCheck, hashsMatch, runShellCommand, ensureFileExists, grepSearchRepo, withVerifyDir, encodeArg)
 
-import Data.ByteString.Lazy.UTF8 (toString)
+import Data.ByteString.Lazy.Char8 (unpack)
 import qualified Data.ByteString.Lazy as B (ByteString, writeFile, null)
 
 -- | Return a filestore implemented using the Darcs distributed revision control system
@@ -55,7 +55,7 @@ darcsFileStore repo = FileStore {
 runDarcsCommand :: FilePath -> String -> [String] -> IO (ExitCode, String, B.ByteString)
 runDarcsCommand repo command args = do
   (status, err, out) <- runShellCommand repo Nothing "darcs" (command : args)
-  return (status, toString err, out)
+  return (status, unpack err, out)
 
 ---------------------------
 -- End utility functions and types
@@ -121,7 +121,7 @@ darcsLog :: FilePath -> [FilePath] -> TimeRange -> Maybe Int -> IO [Revision]
 darcsLog repo names (TimeRange begin end) mblimit = do
        (status, err, output) <- runDarcsCommand repo "changes" $ ["--xml-output", "--summary"] ++ names ++ opts
        if status == ExitSuccess
-        then case parseDarcsXML $ toString output of
+        then case parseDarcsXML $ unpack output of
             Nothing      -> throwIO ResourceExists
             Just parsed -> return $
 #ifdef USE_MAXCOUNT
@@ -156,7 +156,7 @@ darcsLog repo names (TimeRange begin end) mblimit = do
 darcsGetRevision :: FilePath -> RevisionId -> IO Revision
 darcsGetRevision repo hash = do (_,_,output) <- runDarcsCommand repo "changes"
                                                 ["--xml-output", "--summary", "--match=hash " ++ hash]
-                                let hists = parseDarcsXML $ toString output
+                                let hists = parseDarcsXML $ unpack output
                                 case hists of
                                     Nothing -> throwIO NotFound
                                     Just a  -> return $ head a
@@ -171,7 +171,7 @@ darcsLatestRevId repo name = do
 #else
   (_, _, output) <- runDarcsCommand repo "changes" ["--xml-output", name]
 #endif
-  let patchs = parseDarcsXML $ toString output
+  let patchs = parseDarcsXML $ unpack output
   case patchs of
       Nothing -> throwIO NotFound
       Just [] -> throwIO NotFound
@@ -200,7 +200,7 @@ darcsRetrieve repo name mbId = do
      else throwIO $ UnknownError $ "Error in darcs query contents:\n" ++ err
           
 getNames :: B.ByteString -> [String]
-getNames = map (drop 2) . lines . toString
+getNames = map (drop 2) . lines . unpack
 
 -- | Get a list of all known files inside and managed by a repository.
 darcsIndex :: FilePath ->IO [FilePath]
@@ -218,9 +218,9 @@ darcsDirectory repo dir = withVerifyDir (repo </> dir) $ do
   (status2, _errOutput2, output2) <- runDarcsCommand repo "query" ["files","--no-files"]
   if status1 == ExitSuccess && status2 == ExitSuccess
      then do
-       let files = adhocParsing dir' . lines . toString $ output1
+       let files = adhocParsing dir' . lines . unpack $ output1
        -- We need to do 'drop $ length dir' + 3' because Darcs returns files like ["./foo/foobar"].
-       let dirs  = adhocParsing dir' . drop 1 . lines . toString $ output2
+       let dirs  = adhocParsing dir' . drop 1 . lines . unpack $ output2
        -- We need the drop 1 to eliminate the root directory, which appears first.
        -- Now, select the ones that are in THIS directory and convert to Resources:
        let files' = map FSFile  $ filter ('/' `notElem`) files

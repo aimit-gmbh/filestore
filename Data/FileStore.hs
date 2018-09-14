@@ -15,16 +15,12 @@
 -}
 
 module Data.FileStore
-           ( module Data.FileStore.Types
-           , module Data.FileStore.Generic
-           , module Data.FileStore.Git
-           , module Data.FileStore.Darcs
-           , module Data.FileStore.Mercurial
-           )
+    ( module FileStore
+    )
 where
 
-import Data.FileStore.Types
-import Data.FileStore.Generic
-import Data.FileStore.Git
-import Data.FileStore.Darcs
-import Data.FileStore.Mercurial
+import           Data.FileStore.Types   as FileStore
+import           Data.FileStore.Generic as FileStore
+import           Data.FileStore.Git as FileStore
+import           Data.FileStore.Darcs as FileStore
+import           Data.FileStore.Mercurial as FileStore

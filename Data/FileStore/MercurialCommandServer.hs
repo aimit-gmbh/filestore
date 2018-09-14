@@ -37,10 +37,9 @@ import System.IO.Unsafe (unsafePerformIO)
 import System.Process (runInteractiveProcess)
 
 import qualified Data.ByteString as B
-import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy as BL
-import qualified Data.ByteString.Lazy.UTF8 as LUTF8
+import qualified Data.ByteString.Lazy.Char8 as LUTF8
 import qualified Data.Map as M
 import qualified System.Info as SI
 
@@ -64,7 +63,7 @@ rawRunMercurialCommand :: FilePath -> String -> [String] -> IO (ExitCode, String
 rawRunMercurialCommand repo command args = do
    let env = [("HGENCODING","utf8")]
    (status, err, out) <- runShellCommand repo (Just env) "hg" (command : args)
-   return (status, LUTF8.toString err, out)
+   return (status, LUTF8.unpack err, out)
 
 -- | Create a new command server for the given repository
 createServer :: FilePath -> IO (Handle,Handle,Handle)
@@ -73,7 +72,7 @@ createServer repo = do
     hello <- readMessage hout
     case hello of
        MessageO _ -> return (hin,hout,herr)
-       MessageE x -> throwIO $ MercurialServerException (UTF8.toString x)
+       MessageE x -> throwIO $ MercurialServerException (B8.unpack x)
        _          -> throwIO $ MercurialServerException "unknown hello message"
 
 -- | Cleanup a command sever.  Mercurial will automatically exit itself
@@ -83,7 +82,7 @@ cleanupServer (hin,hout,herr) = hClose hin >> hClose hout >> hClose herr
 
 -- | format a command for sending to the server
 formatCommand :: String -> [String] -> B.ByteString
-formatCommand cmd args = UTF8.fromString $ intercalate "\0" $ cmd : args
+formatCommand cmd args = B8.pack $ intercalate "\0" $ cmd : args
 
 -- | run a command using the mercurial server
 runMercurialServer :: String -> [String] -> (Handle,Handle,Handle) -> IO (ExitCode, String, BL.ByteString)
@@ -105,7 +104,7 @@ processUntilR hout _ = loop BL.empty BL.empty
                 MessageE x -> loop out (BL.append err $ BL.fromChunks [x])
                 MessageR c -> if c == 0
                                 then return (ExitSuccess, "", out)
-                                else return (ExitFailure c, LUTF8.toString err, out)
+                                else return (ExitFailure c, LUTF8.unpack err, out)
 
 data MercurialMessage = MessageO B.ByteString
                       | MessageE B.ByteString
@@ -228,7 +227,7 @@ checkVersion
         (status,_,out) <- runShellCommand "." Nothing "hg" ["version", "-q"]
         case status of
           ExitFailure _ -> return False
-          ExitSuccess   -> return $ parseVersion (LUTF8.toString out) >= [2,0]
+          ExitSuccess   -> return $ parseVersion (LUTF8.unpack out) >= [2,0]
 
 -- | Helps to find out what operating system we are on
 --   Example usage:

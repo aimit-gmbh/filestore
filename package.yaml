@@ -1,0 +1,70 @@
+# This YAML file describes your package. Stack will automatically generate a
+# Cabal file when you run `stack build`. See the hpack website for help with
+# this file: <https://github.com/sol/hpack>.
+name: filestore
+version: '0.6.3.4'
+github: "githubuser/fendor"
+license: BSD3
+author: "John MacFarlane, Gwern Branwen, Sebastiaan Visser"
+maintainer: "None"
+synopsis: Interface for versioning file stores.
+description: The filestore library provides an abstract interface for a versioning
+                     file store, and modules that instantiate this interface.  Currently
+                     Git, Darcs, and Mercurial modules are provided, and other VCSs
+                     or databases could be added.
+category: Data
+
+extra-source-files:
+- CHANGES
+- LICENSE
+- package.yaml
+- stack.yaml
+- extra/post-update
+- TODO
+
+ghc-options: -Wall -fno-warn-unused-do-bind
+
+library:
+  dependencies:
+  - base
+  - bytestring
+  - containers
+  - filepath
+  - directory
+  - parsec
+  - process
+  - time
+  - xml
+  - split
+  - old-locale
+  - Diff
+  source-dirs: .
+  when:
+  - condition: 'flag(maxcount)'
+    cpp-options: -DUSE_MAXCOUNT
+
+tests:
+  filestore-test-suite:
+    source-dirs: tests
+    main: Main.hs
+    dependencies:
+    - base
+    - filestore
+    - HUnit
+    - mtl
+    - time
+    - Diff
+    - filepath
+    - directory
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    - -with-rtsopts=-N
+
+flags: 
+  maxcount: 
+    default: true
+    manual: true
+    description: Make use of a recent (>= 2.3.0) Darcs feature which vastly improves the performance
+                 of 'latest'.  You should disable this flag if you plan to use gitit with an
+                 older version of Darcs, or 'latest' will raise an error.
