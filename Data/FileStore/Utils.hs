@@ -97,8 +97,22 @@ mergeContents (newLabel, newContents) (originalLabel, originalContents) (latestL
   (conflicts, mergedContents) <-
     if gitExists
        then do
-         (status, err, out) <- runShellCommand tempPath Nothing "git" ["merge-file", "--stdout", "-L", newLabel, "-L",
-                                     originalLabel, "-L", latestLabel, newPath, originalPath, latestPath]
+         (status, err, out) <- runShellCommand 
+            tempPath 
+            Nothing 
+            "git" 
+            ["merge-file"
+            , "--stdout"
+            , "-L"
+            , newLabel
+            , "-L"
+            , originalLabel
+            , "-L"
+            , latestLabel
+            , newPath
+            , originalPath
+            , latestPath
+            ]
          case status of
               ExitSuccess             -> return (False, out)
               ExitFailure n | n >= 0  -> return (True, out)
@@ -156,7 +170,12 @@ isInsideDir name dir = dir `isPrefixOf` name
 parseMatchLine :: String -> SearchMatch
 parseMatchLine str =
   let (fn:n:res:_) = splitWhen (==':') str
-  in  SearchMatch{matchResourceName = fn, matchLineNumber = read n, matchLine = res}
+  in  
+    SearchMatch
+      { matchResourceName = fn
+      , matchLineNumber = read n
+      , matchLine = res
+      }
 
 -- | Our policy is: if the input is clearly a "name \<e\@mail.com\>" input, then we return "(Just Address, Name)"
 --   If there is no '<' in the input, then it clearly can't be of that format, and so we just return "(Nothing, Name)"
@@ -177,10 +196,11 @@ trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace
 -- | Search multiple files with a single regexp.
 --   This calls out to grep, and so supports the regular expressions grep does.
 regSearchFiles :: FilePath -> [String] -> String -> IO [String]
-regSearchFiles repo filesToCheck pattern = do (_, _, result) <- runShellCommand repo
-                                                             Nothing  "grep" $ ["--line-number", "-I", "-l", "-E", "-e", pattern] ++ filesToCheck
-                                              let results = intersect filesToCheck $ lines $ unpack result
-                                              return results
+regSearchFiles repo filesToCheck pattern = do 
+  (_, _, result) <- runShellCommand repo
+      Nothing  "grep" $ ["--line-number", "-I", "-l", "-E", "-e", pattern] ++ filesToCheck
+  let results = intersect filesToCheck $ lines $ unpack result
+  return results
 
 -- | Search a single file with multiple regexps.
 regsSearchFile :: [String] -> FilePath -> [String] -> String -> IO [String]
