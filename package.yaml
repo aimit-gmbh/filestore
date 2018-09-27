@@ -19,8 +19,10 @@ extra-source-files:
 - LICENSE
 - package.yaml
 - stack.yaml
-- extra/post-update
 - TODO
+
+data-files:
+- extra/post-update
 
 ghc-options: -Wall -Wcompat -Wincomplete-uni-patterns -Wincomplete-record-updates -fno-warn-unused-do-bind -Wredundant-constraints -Wpartial-fields
 
